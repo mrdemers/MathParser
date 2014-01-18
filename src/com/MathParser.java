@@ -10,10 +10,14 @@ import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.JSlider;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 public class MathParser extends Canvas implements Runnable{
 	private static final long serialVersionUID = 1L;
@@ -24,12 +28,13 @@ public class MathParser extends Canvas implements Runnable{
 	public boolean[][] checked;
 	public ArrayList<String> characters;
 	public ArrayList<ArrayList<Point>> points;
+	public float fuzziness = .2f;
 	public static int WIDTH = 800, HEIGHT = 600;
 	
 	public MathParser() {
 		this.setSize(800, 600);
 		try {
-			imageOriginal = ImageIO.read(this.getClass().getResource("/IMG_0306.jpg"));
+			imageOriginal = ImageIO.read(this.getClass().getResource("/IMG_0307.jpg"));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -49,40 +54,64 @@ public class MathParser extends Canvas implements Runnable{
 	public void analyzeImage() {
 		int width = image.getWidth(null);
 		int height = image.getHeight(null);
-		for (int y = 1; y < height-1; y++) {
-			for (int x = 1; x < width-1; x++) {
+		for (int y = 2; y < height-2; y++) {
+			for (int x = 2; x < width-2; x++) {
 				if (checked[x][y]) continue;
 				if (getColorContrast(x, y)){
+					int color = image.getRGB(x, y);
 					minX = WIDTH;
 					maxX = 0;
 					minY = HEIGHT;
 					maxY = 0;
 					points.add(new ArrayList<Point>());
-					createCharacter(x, y);
+					checked[x][y] = true;
+					try {
+						createCharacter(x, y, color);
+					} catch (StackOverflowError e) {
+						
+					}
 				}
 			}
 		}
+		System.out.println("Done analyzing " + fuzziness);
 	}
 	
 	int minX, maxX, minY, maxY;
-	public void createCharacter(int x, int y) {
-		if (x >= WIDTH-1 || x < 1 || y >= HEIGHT-1 || y < 1) return;
-		if (checked[x][y]) return;
-		if (getColorContrast(x, y)) {
+	public void createCharacter(int x, int y, int color) {
+		if (x >= WIDTH-2 || x < 2 || y >= HEIGHT-2 || y < 2) return;
+		int imageColor = image.getRGB(x, y);
+		if (getColorSimilar(imageColor, color, fuzziness) || checked[x][y]) {
 			if (x < minX) minX = x;
 			if (x > maxX) maxX = x;
 			if (y < minY) minY = y;
 			if (y > maxY) maxY = y;
 			checked[x][y] = true;
 			points.get(points.size()-1).add(new Point(x, y));
-			createCharacter(x-1, y);
-			createCharacter(x+1, y);
-			createCharacter(x, y-1);
-			createCharacter(x, y+1);
+			if (!checked[x-1][y]) {
+				createCharacter(x-1, y, color);
+			}
+			if (!checked[x+1][y]) {
+				createCharacter(x+1, y, color);
+			}
+			if (!checked[x][y-1]) {
+				createCharacter(x, y-1, color);
+			}
+			if (!checked[x][y+1]) {
+				createCharacter(x, y+1, color);
+			}
 		}
 	}
 	
+	//Returns true if the source color is similar to the compare color by fuzziness percent
 	public boolean getColorSimilar(int src, int compare, float fuzziness) {
+		int rd = red(src) - red(compare);
+		int gd = green(src) - green(compare);
+		int bd = blue(src) - blue(compare);
+		double maxDist = 255*fuzziness;
+		double dist = Math.sqrt(rd*rd + gd*gd + bd*bd);
+		if (dist < maxDist) {
+			return true;
+		}
 		return false;
 	}
 	
@@ -94,30 +123,42 @@ public class MathParser extends Canvas implements Runnable{
 		int gs = green(src);
 		int bs = blue(src);
 		//Color values of the surrounding colors
-		int up = image.getRGB(x, y-1);
-		int down = image.getRGB(x, y+1);
-		int left = image.getRGB(x-1, y);
-		int right = image.getRGB(x+1, y);
+		int up = image.getRGB(x, y-2);
+		int down = image.getRGB(x, y+2);
+		int left = image.getRGB(x-2, y);
+		int right = image.getRGB(x+2, y);
 		
 		//Threshold
-		int tr = 30;
+		float tr = .2f;
 		
-		if (Math.abs(rs - red(up)) > tr ||
-			Math.abs(rs - red(down)) > tr ||
-			Math.abs(rs - red(left)) > tr ||
-			Math.abs(rs - red(right)) > tr ||
-			Math.abs(gs - green(up)) > tr ||
-			Math.abs(gs - green(down)) > tr ||
-			Math.abs(gs - green(left)) > tr ||
-			Math.abs(gs - green(right)) > tr ||
-			Math.abs(bs - blue(up)) > tr ||
-			Math.abs(bs - blue(down)) > tr ||
-			Math.abs(bs - blue(left)) > tr ||
-			Math.abs(bs - blue(right)) > tr) {
-			float[] hsbvals = new float[3];
-			Color.RGBtoHSB(rs, gs, bs, hsbvals);
-			if (hsbvals[2] <= 40)
-				return true;
+		float[] hsbvals = new float[3];
+		Color.RGBtoHSB(rs, gs, bs, hsbvals);
+		
+		float[] hsbUp = new float[3];
+		float[] hsbDown = new float[3];
+		float[] hsbLeft = new float[3];
+		float[] hsbRight = new float[3];
+		Color.RGBtoHSB(red(up), green(up), blue(up), hsbUp);
+		Color.RGBtoHSB(red(down), green(down), blue(down), hsbDown);
+		Color.RGBtoHSB(red(left), green(left), blue(left), hsbLeft);
+		Color.RGBtoHSB(red(right), green(right), blue(right), hsbRight);
+		
+		float vDeltaUp = Math.abs(hsbvals[2] - hsbUp[2]);
+		float vDeltaDown = Math.abs(hsbvals[2] - hsbDown[2]);
+		float vDeltaLeft = Math.abs(hsbvals[2] - hsbLeft[2]);
+		float vDeltaRight = Math.abs(hsbvals[2] - hsbRight[2]);
+		//System.out.println("VDelta: " + vDeltaUp + ", " + vDeltaDown + ", " + vDeltaLeft + ", " + vDeltaRight);
+		if (vDeltaUp > tr && hsbUp[2] > hsbvals[2]) {
+			return true;
+		}
+		if (vDeltaDown > tr && hsbDown[2] > hsbvals[2]) {
+			return true;
+		}
+		if (vDeltaLeft > tr && hsbLeft[2] > hsbvals[2]) {
+			return true;
+		}
+		if (vDeltaRight > tr && hsbRight[2] > hsbvals[2]) {
+			return true;
 		}
 		return false;
 	}
@@ -156,19 +197,20 @@ public class MathParser extends Canvas implements Runnable{
 		g.dispose();
 		bs.show();
 	}
-	
-	@Override
-	public void run() {
-		while (running) {
-			analyzeImage();
-			render();
-			try {
-				System.out.println("Waiting...");
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+
+	public void update() {
+		for (int i = 0; i < WIDTH; i++) {
+			for (int j = 0; j < HEIGHT; j++) {
+				checked[i][j] = false;
 			}
 		}
+		points.clear();
+		analyzeImage();
+		render();
+	}
+	@Override
+	public void run() {
+		update();
 	}
 	
 	public void start() {
@@ -193,9 +235,19 @@ public class MathParser extends Canvas implements Runnable{
 		frame.setSize(WIDTH, HEIGHT);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setLayout(new BorderLayout());
-		JPanel panel = new JPanel();
-		MathParser parser = new MathParser();
-		panel.add(parser);
+		JPanel panel = new JPanel(new BorderLayout());
+		final MathParser parser = new MathParser();
+		panel.add(parser, BorderLayout.CENTER);
+		JSlider slider = new JSlider(0, 100, 20);
+		slider.addChangeListener(new ChangeListener() {
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				JSlider source = (JSlider)e.getSource();
+				parser.fuzziness = source.getValue()/100f;
+				parser.update();
+			}
+		});
+		panel.add(slider, BorderLayout.SOUTH);
 		frame.add(panel, BorderLayout.CENTER);
 		frame.setVisible(true);
 		parser.start();
