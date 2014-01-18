@@ -24,36 +24,59 @@ public class MathParser extends Canvas implements Runnable{
 	private boolean running = false;
 	private Thread thread;
 	public BufferedImage imageOriginal, image;
+	public BufferedImage one, two, three, four, five, six, seven, eight, nine, zero;
 	public Image temp;
 	public boolean[][] checked;
 	public ArrayList<String> characters;
 	public ArrayList<ArrayList<Point>> points;
-	public float fuzziness = .2f;
+	public float fuzziness = .25f;
 	public static int WIDTH = 800, HEIGHT = 600;
+	public ArrayList<BufferedImage> createdImages = new ArrayList<BufferedImage>();
+	public ArrayList<ArrayList<BufferedImage>> resizedImages = new ArrayList<ArrayList<BufferedImage>>();
 	
 	public MathParser() {
 		this.setSize(800, 600);
-		try {
-			imageOriginal = ImageIO.read(this.getClass().getResource("/IMG_0307.jpg"));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		temp = imageOriginal.getScaledInstance(WIDTH, HEIGHT, BufferedImage.SCALE_SMOOTH);
-		image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB);
-		Graphics g = image.getGraphics();
-		g.drawImage(temp, 0, 0, null);
-		g.dispose();
+		imageOriginal = readImage("IMG_0306.jpg");
+		one = readImage("one.png");
+		two = readImage("two.png");
+		three = readImage("three.png");
+		four = readImage("four.png");
+		five = readImage("five.png");
+		six = readImage("six.png");
+		seven = readImage("seven.png");
+		eight = readImage("eight.png");
+		nine = readImage("nine.png");
+		zero = readImage("zero.png");
+		
+		image = resize(imageOriginal, WIDTH, HEIGHT);
 		
 		checked = new boolean[WIDTH][HEIGHT];
 		points = new ArrayList<ArrayList<Point>>();
 		characters = new ArrayList<String>();
 	}
 	
-	// The color of lead on paper hopefully
-	public int myColor = 0xff1e140a;
+	public BufferedImage readImage(String fileName) {
+		BufferedImage img = null;
+		try {
+			img = ImageIO.read(this.getClass().getResource("/" + fileName)); 
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return img;
+	}
+	public BufferedImage resize(BufferedImage img, int newWidth, int newHeight) {
+		Image temp = img.getScaledInstance(newWidth, newHeight, BufferedImage.SCALE_SMOOTH);
+		BufferedImage ret = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_ARGB);
+		Graphics g = ret.getGraphics();
+		g.drawImage(temp, 0, 0, null);
+		g.dispose();
+		return ret;
+	}
+	
 	public void analyzeImage() {
 		int width = image.getWidth(null);
 		int height = image.getHeight(null);
+		String answer = "";
 		for (int y = 2; y < height-2; y++) {
 			for (int x = 2; x < width-2; x++) {
 				if (checked[x][y]) continue;
@@ -63,17 +86,110 @@ public class MathParser extends Canvas implements Runnable{
 					maxX = 0;
 					minY = HEIGHT;
 					maxY = 0;
-					points.add(new ArrayList<Point>());
+					System.out.println("Point: " + x + ", " + y);
+					ArrayList<Point> ps = new ArrayList<Point>();
+					points.add(ps);
 					checked[x][y] = true;
 					try {
 						createCharacter(x, y, color);
+						answer += checkImage();
 					} catch (StackOverflowError e) {
 						
 					}
 				}
 			}
 		}
-		System.out.println("Done analyzing " + fuzziness);
+		for (int i = 0; i < points.size(); ) {
+			ArrayList<Point> ps = points.get(i);
+			if (ps.size() > 700) {
+				for (Point p : ps) {
+					checked[p.x][p.y] = false;
+				}
+				points.remove(ps);
+			} else {
+				i++;
+			}
+		}
+		System.out.println(answer);
+	}
+	
+	static int num = 0;
+	public String checkImage() {
+		if (maxX <= minX || maxY <= minY) return "";
+		int sizeX = maxX - minX;
+		int sizeY = maxY - minY;
+		BufferedImage image = new BufferedImage(sizeX, sizeY, BufferedImage.TYPE_INT_ARGB);
+		BufferedImage imageToCheck = image;
+		createdImages.add(image);
+		for (int y = 0; y < image.getHeight(); y++) {
+			for (int x = 0; x < image.getWidth(); x++) {
+				if (checked[x+minX][y+minY]) {
+					image.setRGB(x, y, 0xff000000);
+				} else {
+					image.setRGB(x, y, 0x00ffffff);
+				}
+			}
+		}
+		ArrayList<BufferedImage> resized = new ArrayList<BufferedImage>();
+		float[] similarity = new float[10];
+		imageToCheck = resize(image, one.getWidth(), one.getHeight());
+		resized.add(imageToCheck);
+		similarity[0] = compareImage(imageToCheck, one);
+		imageToCheck = resize(image, two.getWidth(), two.getHeight());
+		resized.add(imageToCheck);
+		similarity[1] = compareImage(imageToCheck, two);
+		imageToCheck = resize(image, three.getWidth(), three.getHeight());
+		resized.add(imageToCheck);
+		similarity[2] = compareImage(imageToCheck, three);
+		imageToCheck = resize(image, four.getWidth(), four.getHeight());
+		resized.add(imageToCheck);
+		similarity[3] = compareImage(imageToCheck, four);
+		imageToCheck = resize(image, five.getWidth(), five.getHeight());
+		resized.add(imageToCheck);
+		similarity[4] = compareImage(imageToCheck, five);
+		imageToCheck = resize(image, six.getWidth(), six.getHeight());
+		resized.add(imageToCheck);
+		similarity[5] = compareImage(imageToCheck, six);
+		imageToCheck = resize(image, seven.getWidth(), seven.getHeight());
+		resized.add(imageToCheck);
+		similarity[6] = compareImage(imageToCheck, seven);
+		imageToCheck = resize(image, eight.getWidth(), eight.getHeight());
+		resized.add(imageToCheck);
+		similarity[7] = compareImage(imageToCheck, eight);
+		imageToCheck = resize(image, nine.getWidth(), nine.getHeight());
+		resized.add(imageToCheck);
+		similarity[8] = compareImage(imageToCheck, nine);
+		imageToCheck = resize(image, zero.getWidth(), zero.getHeight());
+		resized.add(imageToCheck);
+		similarity[9] = compareImage(imageToCheck, zero);
+		float highestNum = 0;
+		int highest = 0;;
+		for (int i = 0; i < similarity.length; i++) {
+			if (similarity[i] > highestNum && similarity[i] > .3) {
+				highestNum = similarity[i];
+				highest = i+1;
+				if (i == 9) {
+					highest = 0;
+				}
+			}
+			System.out.println("Similarity: " + similarity[i] + ", " + highestNum + ", " + highest);
+		}
+		resizedImages.add(resized);
+		return "" + highest;
+	}
+	
+	public float compareImage(BufferedImage src, BufferedImage comp) {
+		float percent = 1.0f;
+		float delta = 1.0f/(src.getWidth() * src.getHeight());
+		for (int y = 0; y < src.getHeight(); y++) {
+			for (int x = 0; x < src.getWidth(); x++) {
+				if (src.getRGB(x, y) == 0xff000000 && comp.getRGB(x, y) != 0xffff0000
+						|| src.getRGB(x, y) != 0xff000000 && comp.getRGB(x, y) == 0xffff0000) {
+					percent -= delta;
+				}
+			}
+		}
+		return percent;
 	}
 	
 	int minX, maxX, minY, maxY;
@@ -194,20 +310,35 @@ public class MathParser extends Canvas implements Runnable{
 					g.drawRect(x, y, 1, 1);
 			}
 		}
+		for (ArrayList<Point> ps : points) {
+			Point p = ps.get(0);
+			g.drawString("" + p.x + ", " + p.y, p.x-50, p.y);
+		}
+		g.drawImage(one, 0, 0, null);
+		g.drawImage(two, 40, 0, null);
+		for (int i = 0; i < createdImages.size(); i++) {
+			g.drawImage(createdImages.get(i), i * 40, 0, null);
+			for (int j = 0; j < resizedImages.get(0).size(); j++) {
+				g.drawImage(resizedImages.get(i).get(j), i*40, 40 + j*40,null);
+			}
+		}
+		
 		g.dispose();
 		bs.show();
 	}
 
-	public void update() {
+	public void update() {	
 		for (int i = 0; i < WIDTH; i++) {
 			for (int j = 0; j < HEIGHT; j++) {
 				checked[i][j] = false;
 			}
 		}
 		points.clear();
+		createdImages.clear();
 		analyzeImage();
 		render();
 	}
+	
 	@Override
 	public void run() {
 		update();
@@ -238,7 +369,7 @@ public class MathParser extends Canvas implements Runnable{
 		JPanel panel = new JPanel(new BorderLayout());
 		final MathParser parser = new MathParser();
 		panel.add(parser, BorderLayout.CENTER);
-		JSlider slider = new JSlider(0, 100, 20);
+		JSlider slider = new JSlider(0, 100, 25);
 		slider.addChangeListener(new ChangeListener() {
 			@Override
 			public void stateChanged(ChangeEvent e) {
