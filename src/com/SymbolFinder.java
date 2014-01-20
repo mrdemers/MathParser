@@ -2,8 +2,12 @@ package com;
 
 import java.awt.Color;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
 
 public class SymbolFinder {
 	private boolean[][] checked;
@@ -44,11 +48,26 @@ public class SymbolFinder {
 					Symbol nextSymbol;
 					checked[x][y] = true;
 					try {
+						boolean add = true;
 						findSymbol(ps, x, y, color);
 						nextSymbol = new Symbol(ps);
-						symbols.put(new Point(nextSymbol.getX(), nextSymbol.getY()), nextSymbol);
+						//Merge symbols if intersecting
+						Rectangle r = nextSymbol.getBoundingBox();
+						for (Symbol s : symbols.getSymbols()) {
+							Rectangle bb = s.getBoundingBox();
+							if (r.intersects(bb) || bb.contains(r) ||
+									Math.abs(r.x - bb.x+bb.width) < 2 ||
+									Math.abs(r.x + r.width-bb.x) < 2) {
+								s.merge(nextSymbol);
+								r = s.getBoundingBox();
+								add = false;
+							}
+						}
+						if (add) {
+							symbols.put(new Point(nextSymbol.getX(), nextSymbol.getY()), nextSymbol);
+						}
 					} catch (StackOverflowError e) {
-						//Sometimes find symbol looks to far, and causes a stack overflow
+						//Sometimes find symbol looks too far, and causes a stack overflow
 						//Just ignore it for now
 					}
 				}

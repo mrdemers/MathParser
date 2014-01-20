@@ -19,6 +19,10 @@ public class Symbol {
 	
 	public Symbol(ArrayList<Point> points) {
 		this.points = points;
+		createBoundingBox();
+	}
+	
+	private void createBoundingBox() {
 		int minX = Integer.MAX_VALUE;
 		int maxX = Integer.MIN_VALUE;
 		int minY = Integer.MAX_VALUE;
@@ -66,5 +70,10 @@ public class Symbol {
 
 	public void setImage(BufferedImage newImage) {
 		this.image = newImage;
+	}
+
+	public void merge(Symbol symbol) {
+		points.addAll(symbol.getPoints());
+		createBoundingBox();
 	}
 }

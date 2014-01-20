@@ -33,7 +33,7 @@ public class MathParser extends Canvas implements Runnable{
 	
 	public MathParser() {
 		this.setSize(WIDTH, HEIGHT);
-		imageOriginal = readImage("IMG_0313.jpg");
+		imageOriginal = readImage("IMG_0312.jpg");
 		imageCopy = resize(imageOriginal, WIDTH, HEIGHT);
 		one = readImage("one.png");
 		two = readImage("two.png");

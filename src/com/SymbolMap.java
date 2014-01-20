@@ -23,6 +23,10 @@ public class SymbolMap {
 		return symbols.values();
 	}
 	
+	public int size() {
+		return symbols.size();
+	}
+	
 	//Will return the string representation of the equation to use
 	public String getEquation() {
 		Set<Point> set = symbols.keySet();
