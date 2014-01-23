@@ -55,13 +55,15 @@ public class SymbolFinder {
 						Rectangle r = nextSymbol.getBoundingBox();
 						for (Symbol s : symbols.getSymbols()) {
 							Rectangle bb = s.getBoundingBox();
-							if (r.intersects(bb) || bb.contains(r) ||
-									Math.abs(r.x - bb.x+bb.width) < 2 ||
-									Math.abs(r.x + r.width-bb.x) < 2) {
+							if (r.intersects(bb) || bb.contains(r) || r.contains(bb)) {
+								System.out.println("Merging");
 								s.merge(nextSymbol);
 								r = s.getBoundingBox();
 								add = false;
 							}
+						}
+						if (r.width < 3 || r.height < 10 || ps.size() > 600) {
+							add = false;
 						}
 						if (add) {
 							symbols.put(new Point(nextSymbol.getX(), nextSymbol.getY()), nextSymbol);

@@ -76,4 +76,8 @@ public class Symbol {
 		points.addAll(symbol.getPoints());
 		createBoundingBox();
 	}
+
+	public void setCharacter(String character) {
+		this.character = character;
+	}
 }

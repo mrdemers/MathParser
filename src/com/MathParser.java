@@ -6,12 +6,12 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
-import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
@@ -27,25 +27,15 @@ public class MathParser extends Canvas implements Runnable{
 	private boolean running = false;
 	private Thread thread;
 	public BufferedImage imageOriginal, imageCopy;
-	public BufferedImage one, two, three, four, five, six, seven, eight, nine, zero;
+	public static final boolean DEBUG = true;
+	
 	public SymbolParser creator;
 	public SymbolMap symbols;
 	
 	public MathParser() {
 		this.setSize(WIDTH, HEIGHT);
-		imageOriginal = readImage("IMG_0312.jpg");
+		imageOriginal = readImage("IMG_0314.jpg");
 		imageCopy = resize(imageOriginal, WIDTH, HEIGHT);
-		one = readImage("one.png");
-		two = readImage("two.png");
-		three = readImage("three.png");
-		four = readImage("four.png");
-		five = readImage("five.png");
-		six = readImage("six.png");
-		seven = readImage("seven.png");
-		eight = readImage("eight.png");
-		nine = readImage("nine.png");
-		zero = readImage("zero.png");
-		
 		creator = new SymbolParser(imageCopy);
 	}
 	
@@ -59,7 +49,7 @@ public class MathParser extends Canvas implements Runnable{
 		return img;
 	}
 	
-	public BufferedImage resize(BufferedImage img, int newWidth, int newHeight) {
+	public static BufferedImage resize(BufferedImage img, int newWidth, int newHeight) {
 		Image temp = img.getScaledInstance(newWidth, newHeight, BufferedImage.SCALE_SMOOTH);
 		BufferedImage ret = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_ARGB);
 		Graphics g = ret.getGraphics();
@@ -85,21 +75,23 @@ public class MathParser extends Canvas implements Runnable{
 		gg.setColor(Color.green);
 		for (Symbol s : symbols.getSymbols()) {
 			gg.drawImage(s.getImage(), s.getX(), s.getY(), null);
-			Rectangle r = s.getBoundingBox();
-			gg.drawRect(r.x, r.y, r.width, r.height);
+			if (DEBUG) {
+				Rectangle r = s.getBoundingBox();
+				gg.drawRect(r.x, r.y, r.width, r.height);
+			}
+		}
+		if (DEBUG) {
+			Collection<Symbol> syms = symbols.getSymbols();
+			ArrayList<Symbol> list = new ArrayList<Symbol>(syms);
+			for (int i = 0; i < list.size(); i++) {
+				gg.drawImage(list.get(i).getImage(), i * 40, 0, null);
+				for (int j = 0; j < creator.resizedImages.get(i).size(); j++) {
+					gg.drawImage(creator.resizedImages.get(i).get(j), i*40, 40 + j*40, null);
+				}
+			}
 		}
 		gg.dispose();
 		g.drawImage(img, 0, 0, WIDTH, HEIGHT, null);
-		/*
-		g.drawImage(one, 0, 0, null);
-		g.drawImage(two, 40, 0, null);
-		for (int i = 0; i < createdImages.size(); i++) {
-			g.drawImage(createdImages.get(i), i * 40, 0, null);
-			for (int j = 0; j < resizedImages.get(0).size(); j++) {
-				g.drawImage(resizedImages.get(i).get(j), i*40, 40 + j*40,null);
-			}
-		}
-		*/
 		g.dispose();
 		bs.show();
 	}
