@@ -5,9 +5,7 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.HashMap;
 
 public class SymbolFinder {
 	private boolean[][] checked;
@@ -30,11 +28,11 @@ public class SymbolFinder {
 		checked = new boolean[WIDTH][HEIGHT];
 	}
 	
-	public SymbolMap findSymbols() {
+	public HashMap<Point, Symbol> findSymbols() {
 		if (image == null) {
 			throw new RuntimeException("No image to look at");
 		}
-		SymbolMap symbols = new SymbolMap();
+		HashMap<Point, Symbol> symbols = new HashMap<Point, Symbol>();
 		
 		//Finds the beginning point for each symbol, and
 		//finds all points in that symbol
@@ -53,10 +51,10 @@ public class SymbolFinder {
 						nextSymbol = new Symbol(ps);
 						//Merge symbols if intersecting
 						Rectangle r = nextSymbol.getBoundingBox();
-						for (Symbol s : symbols.getSymbols()) {
+						for (Symbol s : symbols.values()) {
 							Rectangle bb = s.getBoundingBox();
 							if (r.intersects(bb) || bb.contains(r) || r.contains(bb)) {
-								System.out.println("Merging");
+								//System.out.println("Merging");
 								s.merge(nextSymbol);
 								r = s.getBoundingBox();
 								add = false;

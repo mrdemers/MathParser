@@ -6,12 +6,19 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Set;
 
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
@@ -21,7 +28,7 @@ import javax.swing.JSlider;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
-public class MathParser extends Canvas implements Runnable{
+public class MathParser extends Canvas implements Runnable, KeyListener{
 	private static final long serialVersionUID = 1L;
 	public static int WIDTH = 800, HEIGHT = 600;
 	private boolean running = false;
@@ -30,13 +37,18 @@ public class MathParser extends Canvas implements Runnable{
 	public static final boolean DEBUG = true;
 	
 	public SymbolParser creator;
-	public SymbolMap symbols;
+	public HashMap<Point, Symbol> symbols;
+	public EquationSolver solver;
 	
 	public MathParser() {
 		this.setSize(WIDTH, HEIGHT);
 		imageOriginal = readImage("IMG_0314.jpg");
 		imageCopy = resize(imageOriginal, WIDTH, HEIGHT);
 		creator = new SymbolParser(imageCopy);
+		solver = new EquationSolver();
+		addKeyListener(this);
+		requestFocus();
+		requestFocusInWindow();
 	}
 	
 	public BufferedImage readImage(String fileName) {
@@ -71,9 +83,8 @@ public class MathParser extends Canvas implements Runnable{
 		BufferedImage img = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D gg = img.createGraphics();
 		gg.drawImage(imageCopy, 0, 0, null);
-		System.out.println(symbols.getSymbols().size());
 		gg.setColor(Color.green);
-		for (Symbol s : symbols.getSymbols()) {
+		for (Symbol s : symbols.values()) {
 			gg.drawImage(s.getImage(), s.getX(), s.getY(), null);
 			if (DEBUG) {
 				Rectangle r = s.getBoundingBox();
@@ -81,7 +92,7 @@ public class MathParser extends Canvas implements Runnable{
 			}
 		}
 		if (DEBUG) {
-			Collection<Symbol> syms = symbols.getSymbols();
+			Collection<Symbol> syms = symbols.values();
 			ArrayList<Symbol> list = new ArrayList<Symbol>(syms);
 			for (int i = 0; i < list.size(); i++) {
 				gg.drawImage(list.get(i).getImage(), i * 40, 0, null);
@@ -95,11 +106,36 @@ public class MathParser extends Canvas implements Runnable{
 		g.dispose();
 		bs.show();
 	}
-
+	
+	String equation;
 	public void update() {	
 		symbols = creator.createSymbols();
 		render();
-		System.out.println(symbols.getEquation());
+		this.requestFocusInWindow();
+		equation = getEquation();
+		System.out.println("Input");
+		System.out.println("----------");
+		System.out.println(equation);
+	}
+	
+	public void solveEquation() {
+		solver.solveEquation(equation);		
+	}
+	
+	public String getEquation() {
+		Set<Point> set = symbols.keySet();
+		ArrayList<Point> list = new ArrayList<Point>(set);
+		Collections.sort(list, new Comparator<Point>(){
+			@Override
+			public int compare(Point p1, Point p2) {
+				return p1.x - p2.x;
+			}
+		});
+		String result = "";
+		for (Point p : list) {
+			result += symbols.get(p).getCharacter();
+		}
+		return result;
 	}
 	
 	@Override
@@ -164,8 +200,30 @@ public class MathParser extends Canvas implements Runnable{
 		bottomPanel.add(bottomCenter, BorderLayout.CENTER);
 		bottomPanel.add(bottomLeft, BorderLayout.WEST);
 		panel.add(bottomPanel, BorderLayout.SOUTH);
+		bottomPanel.setFocusable(false);
 		frame.add(panel, BorderLayout.CENTER);
+		frame.setName("Frame");
+		bottomPanel.setName("bottomPanel");
+		panel.setName("mainPanel");
+		parser.setName("The parser");
 		frame.setVisible(true);
 		parser.start();
+	}
+
+	@Override
+	public void keyPressed(KeyEvent e) {
+
+	}
+
+	@Override
+	public void keyReleased(KeyEvent e) {
+		if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+			this.solveEquation();
+		}
+	}
+
+	@Override
+	public void keyTyped(KeyEvent e) {
+
 	}
 }

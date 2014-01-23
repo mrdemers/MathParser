@@ -5,6 +5,10 @@ import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Set;
 
 import javax.imageio.ImageIO;
 
@@ -39,14 +43,10 @@ public class SymbolParser {
 	}
 	
 	public void loadImage(String fileName) {
-		try {
-			this.image = ImageIO.read(this.getClass().getResource("/" + fileName));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		this.image = readImage(fileName);
 	}
 	
-	public BufferedImage readImage(String fileName) {
+	private BufferedImage readImage(String fileName) {
 		BufferedImage img = null;
 		try {
 			img = ImageIO.read(this.getClass().getResource("/" + fileName)); 
@@ -68,11 +68,27 @@ public class SymbolParser {
 		this.threshold = t;
 	}
 	
-	public SymbolMap createSymbols() {
+	public String getEquation(HashMap<Point, Symbol> symbols) {
+		Set<Point> set = symbols.keySet();
+		ArrayList<Point> list = new ArrayList<Point>(set);
+		Collections.sort(list, new Comparator<Point>(){
+			@Override
+			public int compare(Point p1, Point p2) {
+				return p1.x - p2.x;
+			}
+		});
+		String result = "";
+		for (Point p : list) {
+			result += symbols.get(p).getCharacter();
+		}
+		return result;
+	}
+	
+	public HashMap<Point, Symbol> createSymbols() {
 		resizedImages.clear();
 		finder = new SymbolFinder(image, fuzziness, threshold);
-		SymbolMap symbols = finder.findSymbols();
-		for (Symbol s : symbols.getSymbols()) {
+		HashMap<Point, Symbol> symbols = finder.findSymbols();
+		for (Symbol s : symbols.values()) {
 			s.setImage(createImage(s));
 			s.setCharacter(checkImage(s));
 		}
@@ -225,5 +241,4 @@ public class SymbolParser {
 		}
 		return percent;
 	}
-	
 }
