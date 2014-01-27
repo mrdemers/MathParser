@@ -10,6 +10,7 @@ public class Symbol {
 	private Rectangle boundingBox;
 	private BufferedImage image;
 	private String character;
+	private String name;
 	
 	public Symbol() {
 		points = new ArrayList<Point>();
