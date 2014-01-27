@@ -42,7 +42,7 @@ public class MathParser extends Canvas implements Runnable, KeyListener{
 	
 	public MathParser() {
 		this.setSize(WIDTH, HEIGHT);
-		imageOriginal = readImage("IMG_0314.jpg");
+		imageOriginal = readImage("Math.jpg");
 		imageCopy = resize(imageOriginal, WIDTH, HEIGHT);
 		creator = new SymbolParser(imageCopy);
 		solver = new EquationSolver();
